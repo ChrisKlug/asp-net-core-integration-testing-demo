@@ -2,7 +2,7 @@
 
 This repo contains code that demonstrates one way to do integration testing with ASP.NET Core applications that include databases. 
 
-The code is explained in my blog post ()[], so if you are curious, I suggest having a look at that!
+The code is explained in my blog post [Integration Testing with ASP.NET Core](https://www.fearofoblivion.com), so if you are curious, I suggest having a look at that!
 
 ## Background
 
