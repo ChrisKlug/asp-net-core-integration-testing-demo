@@ -31,7 +31,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Get_returns_401_Unauthorized_if_not_authenticated()
         {
-            WebApplicationFactory<Program> application = GetWebApplication();
+            var application = GetWebApplication();
 
             var client = application.CreateClient();
 
@@ -43,7 +43,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Get_returns_all_users()
         {
-            WebApplicationFactory<Program> application = GetWebApplication();
+            var application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
@@ -86,7 +86,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Put_returns_Created_if_successful()
         {
-            WebApplicationFactory<Program> application = GetWebApplication();
+            var application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
@@ -133,7 +133,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Put_returns_sends_notification_if_successful()
         {
-            WebApplicationFactory<Program> application = GetWebApplication();
+            var application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
