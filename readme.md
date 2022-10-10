@@ -1,26 +1,28 @@
 # Example of Integration Testing with ASP.NET Core including a database
 
-This repo contains code that demonstrates one way to do integration testing with ASP.NET Core applications that include databases. 
+This repo contains code that demonstrates how you can do integration testing with ASP.NET Core applications that include authentication and databases. 
 
-The code is explained in my blog post [Integration Testing with ASP.NET Core](https://www.fearofoblivion.com), so if you are curious, I suggest having a look at that!
+The code is explained in my blog post [Integration Testing with ASP.NET Core](https://www.fearofoblivion.com/asp-net-core-integration-testing), so if you are curious, I suggest having a look at that!
 
 ## Background
 
-Having a database often introduces some complexity when it comes to running integration tests, as the data in the database needs to be consistent. This is obviously something that might become complicated when you have tests that add or delete data. Not to mention that the data needs to contain all possible permutations needed to perform the required tests. Something that often leads to complications when new areas are tested, requiring changes to old tests as the data needs to be updated to include the data required for the new tests.
+Having a database often introduces some complexity when it comes to running integration tests, as the data in the database needs to be consistent. This is obviously something that might become a bit complicated when you have tests that add or delete data. Not to mention, that the data needs to contain all possible permutations needed to perform the required tests. Something that often leads to complications when new areas are tested, which requires changes to old tests, due to the data being updated to include the data required for the new tests.
 
 In this sample, the code uses a transaction around each test, allowing the database to be populated with required data before each test, and then rolled back to its original "empty" state when completed. This also allows you to validate the contents in the database as part of the test if needed. Without seeing data from other tests that are being run.
 
 __Caveat:__ There might be edge cases where the transactions cause deadlocks. However, so far, this has not been observed while using this way of working.
 
+The sample also includes some code to handle authentication when doing ASP.NET Core integration. In this particular example, the solution adds a separate Basic Auth scheme, and updates the default authorization policy to check the new scheme as well. This should work in a lot of cases. However, in some cases, a more complex solution might need to be implemented.
+
 ## Source code
 
 The source code consists of 2 applications, a Web API that is to be tested, and a test project using xUnit to run the tests.
 
-The test project contains 3 different versions of tests. The first and most simple, is the [UsersControllerTests](./AspNetCoreTesting.Api.Tests/UsersControllerTests.cs) class. This class does all set up inside each test method. 
+The test project contains 3 different versions of tests. The first and most simple, is the [UsersControllerTests](./AspNetCoreTesting.Api.Tests/UsersControllerTests.cs) class. This class does all set up inside a helper method in the test class. 
 
-However, as this becomes tedious and annoying, there is a cleaner version called [UsersControllerTestsWithTestBase](./AspNetCoreTesting.Api.Tests/UsersControllerTestsWithTestBase.cs), which uses 2 base classes to perform the set-up. This allows each test method to be much cleaner, while still being able to perform everything it needs.
+However, as this becomes tedious and annoying if there are many test classes, there is a cleaner version called [UsersControllerTestsWithTestBase](./AspNetCoreTesting.Api.Tests/UsersControllerTestsWithTestBase.cs), which uses 2 base classes to perform the set-up. This version also uses a more functional syntax, allowing each test method to be a bit cleaner, while still able to perform everything it needs.
 
-Finally, there one version called [UsersControllerTestsWithTestHelper](AspNetCoreTesting.Api.Tests/UsersControllerTestsWithTestHelper.cs) that uses a helper class to do the set-up. The helper class is using a fluid syntax that gives the test methods an easy way to set up and run the tests as needed. 
+Finally, there one version called [UsersControllerTestsWithTestHelper](AspNetCoreTesting.Api.Tests/UsersControllerTestsWithTestHelper.cs) that uses a helper class to do the set-up. The helper class is using a fluid syntax that gives the test methods an easy way to set up and run the tests as needed. This implementation also enables the use of extension methods to add custom functionality.
 
 __Note:__ The [TestHelper](AspNetCoreTesting.Api.Tests/Infrastructure/TestHelper.cs) is a quick simple implementation that probably needs a bit more work. But it is there for you to see.
 
