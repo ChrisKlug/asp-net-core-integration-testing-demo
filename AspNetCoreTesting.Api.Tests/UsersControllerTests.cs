@@ -160,8 +160,7 @@ namespace AspNetCoreTesting.Api.Tests
         }
 
         private WebApplicationFactory<Program> GetWebApplication()
-        {
-            return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            => new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
                 {
@@ -183,6 +182,5 @@ namespace AspNetCoreTesting.Api.Tests
                     });
                 });
             });
-        }
     }
 }
