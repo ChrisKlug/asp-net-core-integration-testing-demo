@@ -1,14 +1,20 @@
 using AspNetCoreTesting.Api.Data;
 using AspNetCoreTesting.Api.Data.Entities;
 using AspNetCoreTesting.Api.Services;
+using Bazinga.AspNetCore.Authentication.Basic;
 using FakeItEasy;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -16,22 +22,28 @@ namespace AspNetCoreTesting.Api.Tests
 {
     public class UsersControllerTests
     {
+        private const string Username = "Test";
+        private const string Password = "test";
+        private readonly string base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{Username}:{Password}"));
         private const string SqlConnectionString = "Server=localhost,14331;Database=AspNetCoreTesting;User Id=sa;Password=P@ssword123";
         private INotificationService NotificationServiceFake = A.Fake<INotificationService>();
 
         [Fact]
+        public async Task Get_returns_401_Unauthorized_if_not_authenticated()
+        {
+            WebApplicationFactory<Program> application = GetWebApplication();
+
+            var client = application.CreateClient();
+
+            var response = await client.GetAsync("/users");
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
         public async Task Get_returns_all_users()
         {
-            var application = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => {
-                builder.ConfigureTestServices(services => {
-                    var options = new DbContextOptionsBuilder<ApiContext>()
-                                    .UseSqlServer(SqlConnectionString)
-                                    .Options;
-                    services.AddSingleton(options);
-                    services.AddSingleton<ApiContext>();
-                    services.AddSingleton(NotificationServiceFake);
-                });
-            });
+            WebApplicationFactory<Program> application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
@@ -54,6 +66,7 @@ namespace AspNetCoreTesting.Api.Tests
                     }
 
                     var client = application.CreateClient();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
 
                     var response = await client.GetAsync("/users");
 
@@ -73,16 +86,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Put_returns_Created_if_successful()
         {
-            var application = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => {
-                builder.ConfigureTestServices(services => {
-                    var options = new DbContextOptionsBuilder<ApiContext>()
-                                    .UseSqlServer(SqlConnectionString)
-                                    .Options;
-                    services.AddSingleton(options);
-                    services.AddSingleton<ApiContext>();
-                    services.AddSingleton(NotificationServiceFake);
-                });
-            });
+            WebApplicationFactory<Program> application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
@@ -93,6 +97,7 @@ namespace AspNetCoreTesting.Api.Tests
                     transaction = ctx.Database.BeginTransaction();
 
                     var client = application.CreateClient();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
 
                     var response = await client.PutAsJsonAsync("/users/", new { firstName = "John", lastName = "Doe" });
 
@@ -128,16 +133,7 @@ namespace AspNetCoreTesting.Api.Tests
         [Fact]
         public async Task Put_returns_sends_notification_if_successful()
         {
-            var application = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => {
-                builder.ConfigureTestServices(services => {
-                    var options = new DbContextOptionsBuilder<ApiContext>()
-                                    .UseSqlServer(SqlConnectionString)
-                                    .Options;
-                    services.AddSingleton(options);
-                    services.AddSingleton<ApiContext>();
-                    services.AddSingleton(NotificationServiceFake);
-                });
-            });
+            WebApplicationFactory<Program> application = GetWebApplication();
 
             using (var services = application.Services.CreateScope())
             {
@@ -148,6 +144,7 @@ namespace AspNetCoreTesting.Api.Tests
                     transaction = ctx.Database.BeginTransaction();
 
                     var client = application.CreateClient();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
 
                     var response = await client.PutAsJsonAsync("/users/", new { firstName = "John", lastName = "Doe" });
 
@@ -160,6 +157,32 @@ namespace AspNetCoreTesting.Api.Tests
                     transaction?.Rollback();
                 }
             }
+        }
+
+        private WebApplicationFactory<Program> GetWebApplication()
+        {
+            return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    var options = new DbContextOptionsBuilder<ApiContext>()
+                                    .UseSqlServer(SqlConnectionString)
+                                    .Options;
+                    services.AddSingleton(options);
+                    services.AddSingleton<ApiContext>();
+                    services.AddSingleton(NotificationServiceFake);
+
+                    services.AddAuthentication()
+                            .AddBasicAuthentication(credentials => Task.FromResult(credentials.username == Username && credentials.password == Password));
+
+                    services.AddAuthorization(config =>
+                    {
+                        config.DefaultPolicy = new AuthorizationPolicyBuilder(config.DefaultPolicy)
+                                                    .AddAuthenticationSchemes(BasicAuthenticationDefaults.AuthenticationScheme)
+                                                    .Build();
+                    });
+                });
+            });
         }
     }
 }

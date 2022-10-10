@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Bazinga.AspNetCore.Authentication.Basic;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace AspNetCoreTesting.Api.Tests.Infrastructure
@@ -16,6 +19,7 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
         private Dictionary<Type, Func<IServiceProvider, DbContext>> _dbContexts = new();
         private Dictionary<Type, Func<SqlCommand, Task>> _dbPreparations = new();
         private List<Action<IServiceCollection>> _serviceOverrides = new();
+        private List<Action<HttpClient>> _clientPreparations = new();
         private Dictionary<Type, Func<SqlCommand, Task>> _postTestDbValidations = new();
 
         public TestHelper<TEntryPoint> AddDbContext<TContext>(string connectionString) where TContext : DbContext
@@ -34,6 +38,35 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
         public TestHelper<TEntryPoint> PrepareDb<TContext>(Func<SqlCommand, Task> callback) where TContext : DbContext
         {
             _dbPreparations.Add(typeof(TContext), callback);
+
+            return this;
+        }
+
+        public TestHelper<TEntryPoint> AddFakeAuth(string username, string password)
+        {
+            _serviceOverrides.Add(services =>
+            {
+                services.AddAuthentication()
+                                .AddBasicAuthentication(credentials => Task.FromResult(credentials.username == username && credentials.password == password));
+
+                services.AddAuthorization(config =>
+                {
+                    config.DefaultPolicy = new AuthorizationPolicyBuilder(config.DefaultPolicy)
+                                                .AddAuthenticationSchemes(BasicAuthenticationDefaults.AuthenticationScheme)
+                                                .Build();
+                });
+            });
+
+            return this;
+        }
+
+        public TestHelper<TEntryPoint> AddFakeClientAuth(string username, string password)
+        {
+            _clientPreparations.Add(client =>
+            {
+                var base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{username}:{password}"));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64EncodedAuthenticationString);
+            });
 
             return this;
         }
@@ -94,6 +127,11 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
                     }
 
                     var client = application.CreateClient();
+
+                    foreach (var fn in _clientPreparations)
+                    {
+                        fn(client);
+                    }
 
                     await test(client);
 

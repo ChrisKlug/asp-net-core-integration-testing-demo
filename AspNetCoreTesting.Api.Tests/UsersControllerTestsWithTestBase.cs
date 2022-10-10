@@ -2,6 +2,7 @@ using AspNetCoreTesting.Api.Data.Entities;
 using AspNetCoreTesting.Api.Tests.Infrastructure;
 using FakeItEasy;
 using Newtonsoft.Json.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,6 +11,18 @@ namespace AspNetCoreTesting.Api.Tests
 {
     public class UsersControllerTestsWithTestBase : UserControllerTestBase
     {
+        [Fact]
+        public Task Get_returns_401_Unauthorized_if_not_authenticated()
+            => RunTest(
+                    test: async client =>
+                    {
+                        var response = await client.GetAsync("/users");
+
+                        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+                    }
+                , addAuth: false);
+
+        [Fact]
         public Task Get_returns_all_users()
             => RunTest(
                     populateDatabase: async cmd =>
