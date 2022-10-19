@@ -1,8 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using AspNetCoreTesting.Api.Data;
 
 namespace AspNetCoreTesting.Api.Migrations
 {
-    public partial class DbMigration : Migration
+    [Migration("DbMigration")]
+    [DbContext(typeof(ApiContext))]
+    public class DbMigration : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
