@@ -1,10 +1,12 @@
 ﻿using Bazinga.AspNetCore.Authentication.Basic;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -21,6 +23,9 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
         private List<Action<IServiceCollection>> _serviceOverrides = new();
         private List<Action<HttpClient>> _clientPreparations = new();
         private Dictionary<Type, Func<SqlCommand, Task>> _postTestDbValidations = new();
+        private string? _environmentName;
+        private IDictionary<string, string>?
+         _config;
 
         public TestHelper<TEntryPoint> AddDbContext<TContext>(string connectionString) where TContext : DbContext
         {
@@ -85,9 +90,31 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
             return this;
         }
 
+        public TestHelper<TEntryPoint> SetEnvironmentName(string name)
+        {
+            _environmentName = name;
+
+            return this;
+        }
+
+        public TestHelper<TEntryPoint> AddConfiguration(IDictionary<string, string> config)
+        {
+            _config = config;
+
+            return this;
+        }
+
         public async Task Run(Func<HttpClient, Task> test)
         {
             var application = new WebApplicationFactory<TEntryPoint>().WithWebHostBuilder(builder => {
+                if (_environmentName != null)
+                    builder.UseEnvironment(_environmentName);
+                
+                if (_config != null)
+                    builder.ConfigureAppConfiguration((ctx, config) => {
+                        config.AddInMemoryCollection(_config);
+                    });
+
                 builder.ConfigureTestServices(services => {
 
                     foreach (var key in _dbContexts.Keys)
