@@ -25,9 +25,10 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
                     builder.UseEnvironment(environmentName);
                     
                 if (configuration != null)
-                    builder.ConfigureAppConfiguration((ctx, config) => {
-                        config.AddInMemoryCollection(configuration);
-                    });
+                {
+                    var config = new ConfigurationBuilder().AddInMemoryCollection(configuration).Build();
+                    builder.UseConfiguration(config);
+                }
             });
 
             using (var services = application.Services.CreateScope())
