@@ -24,8 +24,7 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
         private List<Action<HttpClient>> _clientPreparations = new();
         private Dictionary<Type, Func<SqlCommand, Task>> _postTestDbValidations = new();
         private string? _environmentName;
-        private IDictionary<string, string>?
-         _config;
+        private IDictionary<string, string?>? _config;
 
         public TestHelper<TEntryPoint> AddDbContext<TContext>(string connectionString) where TContext : DbContext
         {
@@ -97,7 +96,7 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
             return this;
         }
 
-        public TestHelper<TEntryPoint> AddConfiguration(IDictionary<string, string> config)
+        public TestHelper<TEntryPoint> AddConfiguration(IDictionary<string, string?> config)
         {
             _config = config;
 
@@ -111,9 +110,12 @@ namespace AspNetCoreTesting.Api.Tests.Infrastructure
                     builder.UseEnvironment(_environmentName);
                 
                 if (_config != null)
-                    builder.ConfigureAppConfiguration((ctx, config) => {
-                        config.AddInMemoryCollection(_config);
-                    });
+                {
+                    var config = new ConfigurationBuilder()
+                                    .AddInMemoryCollection(_config)
+                                    .Build();
+                    builder.UseConfiguration(config);
+                }
 
                 builder.ConfigureTestServices(services => {
 
